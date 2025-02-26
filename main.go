@@ -6,7 +6,7 @@ import (
     "github.com/chromedp/chromedp"
     "github.com/gin-gonic/gin"
     "github.com/swaggo/files"
-    "github.com/swaggo/gin-swagger"
+    ginSwagger "github.com/swaggo/gin-swagger" // Alias to avoid conflict
     "log"
     "os"
     "path/filepath"
@@ -38,7 +38,10 @@ func main() {
         c.Redirect(302, "/docs")
     })
 
-    r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+    // Serve Swagger UI with explicit JSON URL
+    r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs/swagger.json")))
+    // Serve swagger.json explicitly
+    r.StaticFile("/docs/swagger.json", "./docs/swagger.json")
 
     // @Summary Check service health
     // @Description Returns the health status of the service
