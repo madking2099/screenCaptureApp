@@ -35,13 +35,12 @@ func main() {
     }
 
     r.GET("/", func(c *gin.Context) {
-        c.Redirect(302, "/docs/")
+        c.Redirect(302, "/swagger/")
     })
 
-    // Serve Swagger UI with explicit JSON URL
-    log.Println("Setting Swagger UI at /docs/ with JSON at /swagger/swagger.json")
-    r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/swagger.json")))
-    // Serve swagger.json
+    // Serve Swagger UI and JSON under /swagger/
+    log.Println("Setting Swagger UI at /swagger/ with JSON at /swagger/swagger.json")
+    r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/swagger.json")))
     r.StaticFile("/swagger/swagger.json", "./docs/swagger.json")
 
     // @Summary Check service health
