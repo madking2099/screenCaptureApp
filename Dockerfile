@@ -6,8 +6,8 @@ RUN go mod tidy
 RUN go get -d -v ./...
 # Install swag CLI
 RUN go install github.com/swaggo/swag/cmd/swag@latest
-# Generate Swagger docs and verify
-RUN swag init -g main.go --verbose && ls -la /app/docs
+# Generate Swagger docs
+RUN swag init -g main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -o screenshot-service main.go
 
 FROM debian:bullseye-slim
