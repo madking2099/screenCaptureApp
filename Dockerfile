@@ -2,8 +2,8 @@ FROM golang:1.21 AS builder
 WORKDIR /app
 COPY go.mod .
 COPY main.go .
-RUN go mod tidy  # Populate go.mod with indirect dependencies
-RUN go get -d -v ./...  # Download all dependencies explicitly
+RUN go mod tidy
+RUN go get -d -v ./...
 RUN CGO_ENABLED=0 GOOS=linux go build -o screenshot-service main.go
 
 FROM debian:bullseye-slim
