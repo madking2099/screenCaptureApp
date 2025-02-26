@@ -50,7 +50,7 @@ func main() {
     })
 
     // @Summary Capture a webpage screenshot
-    // @Description Takes a URL and returns a screenshot file URL
+    // @Description Takes a URL and returns a screenshot file URL. Headers beyond basic auth in URL are not supported yet.
     // @Accept json
     // @Produce json
     // @Param request body ScreenshotRequest true "Screenshot request payload"
@@ -119,11 +119,6 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
     ctx, cancel = chromedp.NewExecAllocator(ctx, opts...)
     defer cancel()
 
-    // Set headers via a custom task
-    if headers != nil {
-        ctx = chromedp.WithBrowserOption(chromedp.WithHTTPHeaders(headers))(ctx)
-    }
-
     var buf []byte
     tasks := chromedp.Tasks{
         chromedp.Navigate(url),
@@ -133,6 +128,10 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
 
     if err := chromedp.Run(ctx, tasks); err != nil {
         return err
+    }
+    // Log headers as unsupported for now
+    if len(headers) > 0 {
+        log.Printf("Note: Custom headers (%v) are not applied in this version; use URL auth (e.g., https://user:pass@url)", headers)
     }
     return os.WriteFile(outputFile, buf, 0644)
 }
