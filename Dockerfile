@@ -1,39 +1,19 @@
-FROM python:3.9-slim
-
+FROM golang:1.21 AS builder
 WORKDIR /app
+COPY go.mod .
+RUN go mod init screenshot-service || true
+RUN echo "github.com/gin-gonic/gin v1.9.1" >> go.mod && \
+    echo "github.com/chromedp/chromedp v0.9.5" >> go.mod
+RUN go mod tidy
+COPY main.go .
+RUN CGO_ENABLED=0 GOOS=linux go build -o screenshot-service main.go
 
-# Install system dependencies for Playwright
+FROM debian:bullseye-slim
+WORKDIR /app
 RUN apt-get update && apt-get install -y \
-    wget \
-    ca-certificates \
-    libglib2.0-0 \
-    libnss3 \
-    libgconf-2-4 \
-    libfontconfig1 \
-    libxrender1 \
-    libxext6 \
-    libxi6 \
-    libxrandr2 \
-    libxfixes3 \
-    libxcursor1 \
-    libxdamage1 \
-    libxss1 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
+    chromium \
     && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install Playwright and its browsers
-RUN pip install playwright && playwright install chromium
-
-COPY screenshot_service.py .
+COPY --from=builder /app/screenshot-service .
 RUN mkdir -p static
-
 EXPOSE 8000
-
-CMD ["uvicorn", "screenshot_service:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./screenshot-service"]
