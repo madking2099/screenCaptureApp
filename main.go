@@ -38,9 +38,9 @@ func main() {
         c.Redirect(302, "/swagger/")
     })
 
-    // Serve Swagger UI at /swagger/
+    // Serve Swagger UI at /swagger/ (explicit route)
     log.Println("Setting Swagger UI at /swagger/ with JSON at /api-docs/swagger.json")
-    r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json")))
+    r.GET("/swagger/", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json")))
     // Serve swagger.json at /api-docs/swagger.json
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
 
