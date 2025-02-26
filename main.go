@@ -34,85 +34,95 @@ func main() {
         log.Fatal(err)
     }
 
-    r.GET("/", func(c *gin.Context) {
-        c.Redirect(302, "/swagger/")
-    })
-
-    // Serve Swagger UI at /swagger/
-    log.Println("Setting Swagger UI at /swagger/ with JSON at /api-docs/swagger.json")
-    r.GET("/swagger/", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json")))
-    // Serve swagger.json
+    r.GET("/", redirectToSwagger)
+    r.GET("/swagger/", serveSwaggerUI)
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
-
-    // @Summary Check service health
-    // @Description Returns the health status of the service
-    // @Produce json
-    // @Success 200 {object} map[string]string
-    // @Router /health [get]
-    r.GET("/health", func(c *gin.Context) {
-        c.JSON(200, gin.H{"status": "healthy"})
-    })
-
-    // @Summary Capture a webpage screenshot
-    // @Description Takes a URL and returns a screenshot file URL. Headers beyond basic auth in URL are not supported yet.
-    // @Accept json
-    // @Produce json
-    // @Param request body ScreenshotRequest true "Screenshot request payload"
-    // @Success 200 {object} map[string]string
-    // @Failure 400 {object} map[string]string
-    // @Failure 500 {object} map[string]string
-    // @Router /screenshot [post]
-    r.POST("/screenshot", func(c *gin.Context) {
-        var req ScreenshotRequest
-        if err := c.BindJSON(&req); err != nil {
-            c.JSON(400, gin.H{"detail": "Invalid request"})
-            return
-        }
-
-        filename := req.OutputFileName
-        if filename == "" {
-            filename = fmt.Sprintf("screenshot_%d", os.Getpid())
-        }
-        if !strings.HasSuffix(filename, ".png") {
-            filename += ".png"
-        }
-        outputFile := filepath.Join("static", filename)
-
-        err := captureScreenshot(req.URL, outputFile, req.Headers)
-        if err != nil {
-            if _, exists := os.Stat(outputFile); exists == nil {
-                os.Remove(outputFile)
-            }
-            c.JSON(500, gin.H{"detail": fmt.Sprintf("Error capturing screenshot: %v", err)})
-            return
-        }
-
-        c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
-    })
-
-    // @Summary Delete a screenshot file
-    // @Description Removes a screenshot file from the static directory
-    // @Produce json
-    // @Param filename path string true "Filename to delete"
-    // @Success 200 {object} map[string]string
-    // @Failure 404 {object} map[string]string
-    // @Failure 500 {object} map[string]string
-    // @Router /static/{filename} [delete]
-    r.DELETE("/static/:filename", func(c *gin.Context) {
-        filename := c.Param("filename")
-        filePath := filepath.Join("static", filename)
-        if _, err := os.Stat(filePath); os.IsNotExist(err) {
-            c.JSON(404, gin.H{"detail": "File not found"})
-            return
-        }
-        if err := os.Remove(filePath); err != nil {
-            c.JSON(500, gin.H{"detail": fmt.Sprintf("Error deleting file: %v", err)})
-            return
-        }
-        c.JSON(200, gin.H{"message": fmt.Sprintf("File %s deleted", filename)})
-    })
+    r.GET("/health", getHealth)
+    r.POST("/screenshot", postScreenshot)
+    r.DELETE("/static/:filename", deleteScreenshot)
 
     r.Run(":8000")
+}
+
+func redirectToSwagger(c *gin.Context) {
+    c.Redirect(302, "/swagger/")
+}
+
+// @Summary Serve Swagger UI
+// @Description Serves the Swagger UI interface
+// @Produce html
+// @Router /swagger/ [get]
+func serveSwaggerUI(c *gin.Context) {
+    log.Println("Setting Swagger UI at /swagger/ with JSON at /api-docs/swagger.json")
+    ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json"))(c)
+}
+
+// @Summary Check service health
+// @Description Returns the health status of the service
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /health [get]
+func getHealth(c *gin.Context) {
+    c.JSON(200, gin.H{"status": "healthy"})
+}
+
+// @Summary Capture a webpage screenshot
+// @Description Takes a URL and returns a screenshot file URL. Headers beyond basic auth in URL are not supported yet.
+// @Accept json
+// @Produce json
+// @Param request body ScreenshotRequest true "Screenshot request payload"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /screenshot [post]
+func postScreenshot(c *gin.Context) {
+    var req ScreenshotRequest
+    if err := c.BindJSON(&req); err != nil {
+        c.JSON(400, gin.H{"detail": "Invalid request"})
+        return
+    }
+
+    filename := req.OutputFileName
+    if filename == "" {
+        filename = fmt.Sprintf("screenshot_%d", os.Getpid())
+    }
+    if !strings.HasSuffix(filename, ".png") {
+        filename += ".png"
+    }
+    outputFile := filepath.Join("static", filename)
+
+    err := captureScreenshot(req.URL, outputFile, req.Headers)
+    if err != nil {
+        if _, exists := os.Stat(outputFile); exists == nil {
+            os.Remove(outputFile)
+        }
+        c.JSON(500, gin.H{"detail": fmt.Sprintf("Error capturing screenshot: %v", err)})
+        return
+    }
+
+    c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
+}
+
+// @Summary Delete a screenshot file
+// @Description Removes a screenshot file from the static directory
+// @Produce json
+// @Param filename path string true "Filename to delete"
+// @Success 200 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /static/{filename} [delete]
+func deleteScreenshot(c *gin.Context) {
+    filename := c.Param("filename")
+    filePath := filepath.Join("static", filename)
+    if _, err := os.Stat(filePath); os.IsNotExist(err) {
+        c.JSON(404, gin.H{"detail": "File not found"})
+        return
+    }
+    if err := os.Remove(filePath); err != nil {
+        c.JSON(500, gin.H{"detail": fmt.Sprintf("Error deleting file: %v", err)})
+        return
+    }
+    c.JSON(200, gin.H{"message": fmt.Sprintf("File %s deleted", filename)})
 }
 
 func captureScreenshot(url, outputFile string, headers map[string]string) error {
