@@ -5,16 +5,29 @@ import (
     "fmt"
     "github.com/chromedp/chromedp"
     "github.com/gin-gonic/gin"
+    "github.com/swaggo/files"         // Swagger UI files
+    "github.com/swaggo/gin-swagger" // Gin Swagger middleware
+    _ "github.com/swaggo/swag/example/celler/httputil"
     "log"
     "os"
     "path/filepath"
     "strings"
+
+    swag "github.com/swaggo/swag"
 )
 
+// @title Webpage Screenshot Service
+// @version 1.0.0
+// @description Capture screenshots of webpages as images and serve them.
+// @license.name MIT
+// @license.url https://github.com/madking2099/screenCaptureApp/blob/master/LICENSE
+// @host localhost:1388
+// @BasePath /
+
 type ScreenshotRequest struct {
-    URL           string            `json:"url" binding:"required"`
-    Headers       map[string]string `json:"headers"`
-    OutputFileName string            `json:"output_filename"`
+    URL           string            `json:"url" binding:"required" example:"https://example.com"`
+    Headers       map[string]string `json:"headers" example:"{\"User-Agent\": \"MyBot/1.0\"}"`
+    OutputFileName string            `json:"output_filename" example:"screenshot"`
 }
 
 func main() {
@@ -28,10 +41,27 @@ func main() {
         c.Redirect(302, "/docs")
     })
 
+    // Serve Swagger UI at /docs
+    r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+    // @Summary Check service health
+    // @Description Returns the health status of the service
+    // @Produce json
+    // @Success 200 {object} map[string]string
+    // @Router /health [get]
     r.GET("/health", func(c *gin.Context) {
         c.JSON(200, gin.H{"status": "healthy"})
     })
 
+    // @Summary Capture a webpage screenshot
+    // @Description Takes a URL and returns a screenshot file URL
+    // @Accept json
+    // @Produce json
+    // @Param request body ScreenshotRequest true "Screenshot request payload"
+    // @Success 200 {object} map[string]string
+    // @Failure 400 {object} map[string]string
+    // @Failure 500 {object} map[string]string
+    // @Router /screenshot [post]
     r.POST("/screenshot", func(c *gin.Context) {
         var req ScreenshotRequest
         if err := c.BindJSON(&req); err != nil {
@@ -60,6 +90,14 @@ func main() {
         c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
     })
 
+    // @Summary Delete a screenshot file
+    // @Description Removes a screenshot file from the static directory
+    // @Produce json
+    // @Param filename path string true "Filename to delete"
+    // @Success 200 {object} map[string]string
+    // @Failure 404 {object} map[string]string
+    // @Failure 500 {object} map[string]string
+    // @Router /static/{filename} [delete]
     r.DELETE("/static/:filename", func(c *gin.Context) {
         filename := c.Param("filename")
         filePath := filepath.Join("static", filename)
@@ -81,7 +119,6 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
     ctx, cancel := chromedp.NewContext(context.Background())
     defer cancel()
 
-    // Ignore SSL errors for self-signed certs
     opts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("ignore-certificate-errors", true))
     ctx, cancel = chromedp.NewExecAllocator(ctx, opts...)
     defer cancel()
@@ -102,4 +139,10 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
         return err
     }
     return os.WriteFile(outputFile, buf, 0644)
+}
+
+func init() {
+    swag.Register(swag.Name, &swag.Config{
+        EnableCORS: true,
+    })
 }
