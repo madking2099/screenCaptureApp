@@ -6,7 +6,7 @@ import (
     "github.com/chromedp/chromedp"
     "github.com/gin-gonic/gin"
     "github.com/swaggo/files"
-    ginSwagger "github.com/swaggo/gin-swagger" // Alias to avoid conflict
+    ginSwagger "github.com/swaggo/gin-swagger"
     "log"
     "os"
     "path/filepath"
@@ -38,10 +38,8 @@ func main() {
         c.Redirect(302, "/docs")
     })
 
-    // Serve Swagger UI with explicit JSON URL
+    // Serve Swagger UI and swagger.json from /docs
     r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs/swagger.json")))
-    // Serve swagger.json explicitly
-    r.StaticFile("/docs/swagger.json", "./docs/swagger.json")
 
     // @Summary Check service health
     // @Description Returns the health status of the service
@@ -132,7 +130,6 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
     if err := chromedp.Run(ctx, tasks); err != nil {
         return err
     }
-    // Log headers as unsupported for now
     if len(headers) > 0 {
         log.Printf("Note: Custom headers (%v) are not applied in this version; use URL auth (e.g., https://user:pass@url)", headers)
     }
