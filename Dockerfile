@@ -1,11 +1,6 @@
 FROM golang:1.21 AS builder
 WORKDIR /app
 COPY go.mod .
-RUN go mod init screenshot-service || true
-RUN echo "github.com/gin-gonic/gin v1.9.1" >> go.mod && \
-    echo "github.com/chromedp/chromedp v0.9.5" >> go.mod && \
-    echo "github.com/swaggo/gin-swagger v1.6.0" >> go.mod && \
-    echo "github.com/swaggo/files v1.0.1" >> go.mod
 RUN go mod tidy
 COPY main.go .
 RUN CGO_ENABLED=0 GOOS=linux go build -o screenshot-service main.go

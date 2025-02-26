@@ -5,8 +5,8 @@ import (
     "fmt"
     "github.com/chromedp/chromedp"
     "github.com/gin-gonic/gin"
-    "github.com/swaggo/files"         // Swagger UI files
-    "github.com/swaggo/gin-swagger" // Gin Swagger middleware
+    "github.com/swaggo/files"
+    "github.com/swaggo/gin-swagger"
     _ "github.com/swaggo/swag/example/celler/httputil"
     "log"
     "os"
@@ -41,7 +41,6 @@ func main() {
         c.Redirect(302, "/docs")
     })
 
-    // Serve Swagger UI at /docs
     r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
     // @Summary Check service health
