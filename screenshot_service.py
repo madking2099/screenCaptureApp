@@ -11,6 +11,11 @@ from typing import Dict, Optional
 import uvicorn
 from urllib.parse import urlparse
 import uuid
+import logging  # Add logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Webpage Screenshot Service",
@@ -18,7 +23,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Mount static directory to serve files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class ScreenshotRequest(BaseModel):
@@ -42,21 +46,26 @@ def capture_webpage_screenshot(url: str, output_file: str, headers: Optional[Dic
         default_headers.update(headers)
 
     try:
+        logger.info(f"Fetching URL: {url}")
         response = requests.get(url, headers=default_headers, timeout=10)
         response.raise_for_status()
         with open(temp_html, "w", encoding="utf-8") as f:
             f.write(response.text)
-        subprocess.run([
+        logger.info(f"Rendering {temp_html} to {output_file}")
+        result = subprocess.run([
             "wkhtmltoimage",
             "--width", "1280",
             "--quality", "90",
             temp_html,
             output_file
         ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logger.info(f"wkhtmltoimage output: {result.stdout.decode()}")
         return output_file
     except requests.RequestException as e:
+        logger.error(f"Request failed: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Error fetching webpage: {str(e)}")
     except subprocess.CalledProcessError as e:
+        logger.error(f"wkhtmltoimage failed: {e.stderr.decode().strip()}")
         raise HTTPException(status_code=500, detail=f"Error rendering screenshot: {e.stderr.decode().strip()}")
     finally:
         if os.path.exists(temp_html):
@@ -84,7 +93,7 @@ async def create_screenshot(request: ScreenshotRequest):
     except Exception as e:
         if os.path.exists(output_file):
             os.remove(output_file)
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        raise
 
 @app.delete("/static/{filename}")
 async def delete_screenshot(filename: str):
