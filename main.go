@@ -34,10 +34,15 @@ func main() {
         log.Fatal(err)
     }
 
-    log.Println("Setting Swagger UI at /swagger/ with JSON at /api-docs/swagger.json")
+    log.Println("Initializing routes")
     r.GET("/", redirectToSwagger)
-    // Serve Swagger UI at /swagger/ directly
-    r.GET("/swagger/", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json")))
+    // Serve Swagger UI at /swagger/
+    log.Println("Registering Swagger UI at /swagger/ with JSON at /api-docs/swagger.json")
+    swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json"))
+    r.GET("/swagger/", func(c *gin.Context) {
+        log.Println("Handling /swagger/ request")
+        swaggerHandler(c)
+    })
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
     r.GET("/health", getHealth)
     r.POST("/screenshot", postScreenshot)
