@@ -38,10 +38,11 @@ func main() {
         c.Redirect(302, "/swagger/")
     })
 
-    // Serve Swagger UI and JSON under /swagger/
-    log.Println("Setting Swagger UI at /swagger/ with JSON at /swagger/swagger.json")
-    r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/swagger.json")))
-    r.StaticFile("/swagger/swagger.json", "./docs/swagger.json")
+    // Serve Swagger UI at /swagger/
+    log.Println("Setting Swagger UI at /swagger/ with JSON at /api-docs/swagger.json")
+    r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json")))
+    // Serve swagger.json at /api-docs/swagger.json
+    r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
 
     // @Summary Check service health
     // @Description Returns the health status of the service
