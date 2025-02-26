@@ -83,4 +83,51 @@ func main() {
             return
         }
 
-        c
+        c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
+    })
+
+    // @Summary Delete a screenshot file
+    // @Description Removes a screenshot file from the static directory
+    // @Produce json
+    // @Param filename path string true "Filename to delete"
+    // @Success 200 {object} map[string]string
+    // @Failure 404 {object} map[string]string
+    // @Failure 500 {object} map[string]string
+    // @Router /static/{filename} [delete]
+    r.DELETE("/static/:filename", func(c *gin.Context) {
+        filename := c.Param("filename")
+        filePath := filepath.Join("static", filename)
+        if _, err := os.Stat(filePath); os.IsNotExist(err) {
+            c.JSON(404, gin.H{"detail": "File not found"})
+            return
+        }
+        if err := os.Remove(filePath); err != nil {
+            c.JSON(500, gin.H{"detail": fmt.Sprintf("Error deleting file: %v", err)})
+            return
+        }
+        c.JSON(200, gin.H{"message": fmt.Sprintf("File %s deleted", filename)})
+    })
+
+    r.Run(":8000")
+}
+
+func captureScreenshot(url, outputFile string, headers map[string]string) error {
+    ctx, cancel := chromedp.NewContext(context.Background())
+    defer cancel()
+
+    opts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("ignore-certificate-errors", true))
+    ctx, cancel = chromedp.NewExecAllocator(ctx, opts...)
+    defer cancel()
+
+    var buf []byte
+    tasks := chromedp.Tasks{
+        chromedp.Navigate(url, chromedp.WithHTTPHeaders(headers)),
+        chromedp.WaitVisible("body", chromedp.ByQuery),
+        chromedp.FullScreenshot(&buf, 90),
+    }
+
+    if err := chromedp.Run(ctx, tasks); err != nil {
+        return err
+    }
+    return os.WriteFile(outputFile, buf, 0644)
+}
