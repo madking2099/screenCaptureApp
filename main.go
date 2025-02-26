@@ -38,13 +38,10 @@ func main() {
         c.Redirect(302, "/docs/")
     })
 
-    // Serve Swagger UI and swagger.json
-    config := &ginSwagger.Config{
-        URL: "/docs/swagger.json", // Point to the JSON file
-    }
-    r.GET("/docs/*any", ginSwagger.CustomWrapHandler(config, swaggerFiles.Handler))
-    // Serve the swagger.json file explicitly
-    r.StaticFile("/docs/swagger.json", "./docs/swagger.json")
+    // Serve Swagger UI
+    r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/swagger.json")))
+    // Serve swagger.json at a non-conflicting path
+    r.StaticFile("/swagger/swagger.json", "./docs/swagger.json")
 
     // @Summary Check service health
     // @Description Returns the health status of the service
