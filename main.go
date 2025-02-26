@@ -38,9 +38,10 @@ func main() {
         c.Redirect(302, "/docs/")
     })
 
-    // Serve Swagger UI
+    // Serve Swagger UI with explicit JSON URL
+    log.Println("Setting Swagger UI at /docs/ with JSON at /swagger/swagger.json")
     r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/swagger.json")))
-    // Serve swagger.json at a non-conflicting path
+    // Serve swagger.json
     r.StaticFile("/swagger/swagger.json", "./docs/swagger.json")
 
     // @Summary Check service health
