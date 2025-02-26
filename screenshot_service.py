@@ -4,6 +4,7 @@ import requests
 import subprocess
 import os
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import RedirectResponse  # Add this import
 from pydantic import BaseModel, HttpUrl
 from typing import Dict, Optional
 import uvicorn
@@ -55,6 +56,11 @@ def capture_webpage_screenshot(url: str, output_file: str = "screenshot.png", he
     finally:
         if os.path.exists(temp_html):
             os.remove(temp_html)
+
+# New root route to redirect to Swagger UI
+@app.get("/", response_class=RedirectResponse)
+async def root():
+    return "/docs"
 
 @app.post("/screenshot/", response_class=Response)
 async def create_screenshot(request: ScreenshotRequest):
