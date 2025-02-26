@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import requests
-import subprocess
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -11,6 +9,8 @@ from typing import Dict, Optional
 import uvicorn
 from urllib.parse import urlparse
 import uuid
+from playwright.async_api import async_playwright
+import asyncio
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -36,45 +36,22 @@ def is_valid_url(url: str) -> bool:
     except ValueError:
         return False
 
-def capture_webpage_screenshot(url: str, output_file: str, headers: Optional[Dict[str, str]] = None) -> str:
-    temp_html = "temp.html"
-    default_headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    if headers:
-        default_headers.update(headers)
-
+async def capture_webpage_screenshot(url: str, output_file: str, headers: Optional[Dict[str, str]] = None) -> str:
     try:
-        logger.info(f"Fetching URL: {url}")
-        response = requests.get(url, headers=default_headers, timeout=10)
-        response.raise_for_status()
-        with open(temp_html, "w", encoding="utf-8") as f:
-            f.write(response.text)
-        logger.info(f"Rendering {temp_html} to {output_file}")
-        result = subprocess.run([
-            "wkhtmltoimage",
-            "--width", "1280",
-            "--quality", "90",
-            "--enable-javascript",        # Enable JS rendering
-            "--javascript-delay", "2000", # Wait for JS
-            "--no-stop-slow-scripts",     # Don’t halt on slow JS
-            "--ignore-load-errors",       # Skip protocol errors
-            temp_html,
-            output_file
-        ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logger.info(f"wkhtmltoimage output: {result.stdout.decode()}")
-        if result.stderr:
-            logger.warning(f"wkhtmltoimage warnings: {result.stderr.decode()}")
+        logger.info(f"Fetching and screenshotting URL: {url}")
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            if headers:
+                await page.set_extra_http_headers(headers)
+            await page.goto(url, wait_until="networkidle", timeout=30000)  # 30s timeout
+            await page.screenshot(path=output_file, full_page=True, type="png")
+            await browser.close()
+        logger.info(f"Screenshot saved to {output_file}")
         return output_file
-    except requests.RequestException as e:
-        logger.error(f"Request failed: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Error fetching webpage: {str(e)}")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"wkhtmltoimage failed: {e.stderr.decode().strip()}")
-        raise HTTPException(status_code=500, detail=f"Error rendering screenshot: {e.stderr.decode().strip()}")
-    finally:
-        if os.path.exists(temp_html):
-            os.remove(temp_html)
+    except Exception as e:
+        logger.error(f"Screenshot failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error capturing screenshot: {str(e)}")
 
 @app.get("/", response_class=RedirectResponse)
 async def root():
@@ -92,7 +69,7 @@ async def create_screenshot(request: ScreenshotRequest):
     output_file = f"static/{filename}.png" if not filename.endswith(".png") else f"static/{filename}"
     
     try:
-        screenshot_path = capture_webpage_screenshot(str(request.url), output_file, request.headers)
+        screenshot_path = await capture_webpage_screenshot(str(request.url), output_file, request.headers)
         file_url = f"/static/{os.path.basename(screenshot_path)}"
         return JSONResponse(content={"file_url": file_url}, status_code=200)
     except Exception as e:
