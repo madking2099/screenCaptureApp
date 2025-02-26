@@ -24,7 +24,7 @@ It uses `wkhtmltoimage` for rendering, avoiding the overhead of full browser aut
 ## Installation
 
 ### Clone the Repository
-Run: git clone https://github.com/yourusername/screenshot-service.git  
+Run: git clone https://github.com/madking2099/screenCaptureApp.git  
 Then: cd screenshot-service
 
 ### Build the Docker Image
