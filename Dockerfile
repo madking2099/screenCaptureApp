@@ -4,14 +4,16 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     wkhtmltopdf \
+    libxrender1 \
+    libfontconfig1 \
+    libxext6 \
+    fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY screenshot_service.py .
-
-# Create static directory (optional, as the app creates it, but ensures it exists)
 RUN mkdir -p static
 
 EXPOSE 8000
