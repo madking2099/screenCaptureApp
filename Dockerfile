@@ -4,9 +4,10 @@ COPY go.mod .
 COPY main.go .
 RUN go mod tidy
 RUN go get -d -v ./...
-# Install swag CLI and generate Swagger docs
+# Install swag CLI
 RUN go install github.com/swaggo/swag/cmd/swag@latest
-RUN swag init -g main.go
+# Generate Swagger docs and verify
+RUN swag init -g main.go --verbose && ls -la /app/docs
 RUN CGO_ENABLED=0 GOOS=linux go build -o screenshot-service main.go
 
 FROM debian:bullseye-slim
@@ -15,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     chromium \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/screenshot-service .
-COPY --from=builder /app/docs ./docs  # Copy generated Swagger files
+COPY --from=builder /app/docs ./docs
 RUN mkdir -p static
 EXPOSE 8000
 CMD ["./screenshot-service"]
