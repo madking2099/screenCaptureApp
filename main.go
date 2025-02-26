@@ -119,9 +119,14 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
     ctx, cancel = chromedp.NewExecAllocator(ctx, opts...)
     defer cancel()
 
+    // Set headers via a custom task
+    if headers != nil {
+        ctx = chromedp.WithBrowserOption(chromedp.WithHTTPHeaders(headers))(ctx)
+    }
+
     var buf []byte
     tasks := chromedp.Tasks{
-        chromedp.Navigate(url, chromedp.WithHTTPHeaders(headers)),
+        chromedp.Navigate(url),
         chromedp.WaitVisible("body", chromedp.ByQuery),
         chromedp.FullScreenshot(&buf, 90),
     }
