@@ -38,8 +38,10 @@ func main() {
         c.Redirect(302, "/docs")
     })
 
-    // Serve Swagger UI and swagger.json from /docs
+    // Serve Swagger UI
     r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs/swagger.json")))
+    // Explicitly serve swagger.json from /app/docs
+    r.StaticFS("/docs", gin.Dir("./docs", false))
 
     // @Summary Check service health
     // @Description Returns the health status of the service
