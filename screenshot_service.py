@@ -11,9 +11,8 @@ from typing import Dict, Optional
 import uvicorn
 from urllib.parse import urlparse
 import uuid
-import logging  # Add logging
+import logging
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -56,10 +55,16 @@ def capture_webpage_screenshot(url: str, output_file: str, headers: Optional[Dic
             "wkhtmltoimage",
             "--width", "1280",
             "--quality", "90",
+            "--enable-javascript",        # Enable JS rendering
+            "--javascript-delay", "2000", # Wait for JS
+            "--no-stop-slow-scripts",     # Don’t halt on slow JS
+            "--ignore-load-errors",       # Skip protocol errors
             temp_html,
             output_file
         ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         logger.info(f"wkhtmltoimage output: {result.stdout.decode()}")
+        if result.stderr:
+            logger.warning(f"wkhtmltoimage warnings: {result.stderr.decode()}")
         return output_file
     except requests.RequestException as e:
         logger.error(f"Request failed: {str(e)}")
