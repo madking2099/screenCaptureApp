@@ -32,20 +32,21 @@ func main() {
         log.Fatal(err)
     }
 
-    // Enhanced CORS logging and dynamic origin
+    // Enhanced CORS with detailed logging
     r.Use(func(c *gin.Context) {
         origin := c.Request.Header.Get("Origin")
-        log.Printf("CORS request from origin: %s", origin)
+        log.Printf("CORS request - Method: %s, Origin: %s, Path: %s", c.Request.Method, origin, c.Request.URL.Path)
         if origin != "" {
-            // Allow any origin for testing (adjust for production)
+            // Allow any origin for testing (restrict in production)
             c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
             c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
             c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
             c.Writer.Header().Set("Access-Control-Max-Age", "86400") // Cache for 24 hours
             c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+            c.Writer.Header().Set("Vary", "Origin") // Ensure proper caching
         }
         if c.Request.Method == "OPTIONS" {
-            log.Println("Handling CORS preflight")
+            log.Println("Handling CORS preflight - 204 No Content")
             c.AbortWithStatus(204)
             return
         }
