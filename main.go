@@ -32,12 +32,20 @@ func main() {
         log.Fatal(err)
     }
 
-    // Enable CORS for Swagger UI
+    // Enhanced CORS logging and dynamic origin
     r.Use(func(c *gin.Context) {
-        c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:1388")
-        c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        origin := c.Request.Header.Get("Origin")
+        log.Printf("CORS request from origin: %s", origin)
+        if origin != "" {
+            // Allow any origin for testing (adjust for production)
+            c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+            c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
+            c.Writer.Header().Set("Access-Control-Max-Age", "86400") // Cache for 24 hours
+            c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+        }
         if c.Request.Method == "OPTIONS" {
+            log.Println("Handling CORS preflight")
             c.AbortWithStatus(204)
             return
         }
