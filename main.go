@@ -36,12 +36,15 @@ func main() {
 
     log.Println("Initializing routes")
     r.GET("/", redirectToSwagger)
-    // Serve Swagger UI at /swagger/ with wildcard
+    // Serve Swagger UI at /swagger/*any
     log.Println("Registering Swagger UI at /swagger/*any with JSON at /api-docs/swagger.json")
     swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json"))
     r.GET("/swagger/*any", func(c *gin.Context) {
         log.Printf("Handling Swagger request for path: %s", c.Request.URL.Path)
         swaggerHandler(c)
+        if c.Writer.Status() == 404 {
+            log.Printf("Swagger handler returned 404 for %s", c.Request.URL.Path)
+        }
     })
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
     r.GET("/health", getHealth)
