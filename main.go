@@ -5,8 +5,6 @@ import (
     "fmt"
     "github.com/chromedp/chromedp"
     "github.com/gin-gonic/gin"
-    "github.com/swaggo/files"
-    ginSwagger "github.com/swaggo/gin-swagger"
     "log"
     "os"
     "path/filepath"
@@ -36,16 +34,9 @@ func main() {
 
     log.Println("Initializing routes")
     r.GET("/", redirectToSwagger)
-    // Serve Swagger UI at /swagger/*any
-    log.Println("Registering Swagger UI at /swagger/*any with JSON at /api-docs/swagger.json")
-    swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs/swagger.json"))
-    r.GET("/swagger/*any", func(c *gin.Context) {
-        log.Printf("Handling Swagger request for path: %s", c.Request.URL.Path)
-        swaggerHandler(c)
-        if c.Writer.Status() == 404 {
-            log.Printf("Swagger handler returned 404 for %s", c.Request.URL.Path)
-        }
-    })
+    // Serve Swagger UI statically
+    log.Println("Serving Swagger UI statically at /swagger/")
+    r.Static("/swagger", "./swagger-ui")
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
     r.GET("/health", getHealth)
     r.POST("/screenshot", postScreenshot)
