@@ -34,7 +34,6 @@ func main() {
 
     log.Println("Initializing routes")
     r.GET("/", redirectToSwagger)
-    // Serve Swagger UI statically
     log.Println("Serving Swagger UI statically at /swagger/")
     r.Static("/swagger", "./swagger-ui")
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
@@ -68,11 +67,14 @@ func getHealth(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /screenshot [post]
 func postScreenshot(c *gin.Context) {
+    log.Println("Received /screenshot request")
     var req ScreenshotRequest
     if err := c.BindJSON(&req); err != nil {
+        log.Printf("Failed to bind JSON: %v", err)
         c.JSON(400, gin.H{"detail": "Invalid request"})
         return
     }
+    log.Printf("Request bound: %+v", req)
 
     filename := req.OutputFileName
     if filename == "" {
@@ -82,9 +84,11 @@ func postScreenshot(c *gin.Context) {
         filename += ".png"
     }
     outputFile := filepath.Join("static", filename)
+    log.Printf("Output file: %s", outputFile)
 
     err := captureScreenshot(req.URL, outputFile, req.Headers)
     if err != nil {
+        log.Printf("Screenshot failed: %v", err)
         if _, exists := os.Stat(outputFile); exists == nil {
             os.Remove(outputFile)
         }
@@ -92,6 +96,7 @@ func postScreenshot(c *gin.Context) {
         return
     }
 
+    log.Println("Screenshot captured successfully")
     c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
 }
 
