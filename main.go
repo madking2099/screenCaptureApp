@@ -55,7 +55,17 @@ func main() {
 
     log.Println("Initializing routes")
     r.GET("/", redirectToSwagger)
-    log.Println("Serving Swagger UI statically at /swagger/")
+    // Serve Swagger UI with server host query parameter
+    log.Println("Serving Swagger UI statically at /swagger/ with dynamic host")
+    r.GET("/swagger/", func(c *gin.Context) {
+        // Get server host (from Docker or environment)
+        serverHost := "http://localhost:1388" // Default for local testing
+        if host, exists := os.LookupEnv("SERVER_HOST"); exists {
+            serverHost = host
+        }
+        c.Header("Content-Type", "text/html; charset=utf-8")
+        c.Redirect(302, fmt.Sprintf("/swagger/index.html?serverHost=%s", serverHost))
+    })
     r.Static("/swagger", "./swagger-ui")
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
     r.GET("/health", getHealth)

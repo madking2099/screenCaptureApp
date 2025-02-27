@@ -31,4 +31,5 @@ COPY --from=builder /app/docs ./docs
 COPY --from=builder /app/swagger-ui ./swagger-ui
 RUN mkdir -p static
 EXPOSE 8000
+#ENV SERVER_HOST=http://192.168.1.254:1388  # Set your server IP here
 CMD ["./screenshot-service"]
