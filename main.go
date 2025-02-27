@@ -123,11 +123,28 @@ func deleteScreenshot(c *gin.Context) {
 }
 
 func captureScreenshot(url, outputFile string, headers map[string]string) error {
-    ctx, cancel := chromedp.NewContext(context.Background())
+    log.Println("Starting screenshot capture for URL:", url)
+    ctx, cancel := chromedp.NewExecAllocator(
+        context.Background(),
+        append(
+            chromedp.DefaultExecAllocatorOptions[:],
+            chromedp.Flag("headless", true),
+            chromedp.Flag("no-sandbox", true),
+            chromedp.Flag("disable-gpu", true),
+            chromedp.Flag("ignore-certificate-errors", true),
+        )...,
+    )
+    if ctx == nil {
+        log.Println("Failed to create exec allocator")
+        return fmt.Errorf("failed to create exec allocator")
+    }
     defer cancel()
 
-    opts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("ignore-certificate-errors", true))
-    ctx, cancel = chromedp.NewExecAllocator(ctx, opts...)
+    ctx, cancel = chromedp.NewContext(ctx)
+    if ctx == nil {
+        log.Println("Failed to create context")
+        return fmt.Errorf("failed to create context")
+    }
     defer cancel()
 
     var buf []byte
@@ -136,12 +153,20 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
         chromedp.WaitVisible("body", chromedp.ByQuery),
         chromedp.FullScreenshot(&buf, 90),
     }
-
+    log.Println("Running chromedp tasks")
     if err := chromedp.Run(ctx, tasks); err != nil {
+        log.Printf("Chromedp run failed: %v", err)
         return err
     }
+
+    log.Println("Writing screenshot to file")
+    if err := os.WriteFile(outputFile, buf, 0644); err != nil {
+        log.Printf("File write failed: %v", err)
+        return err
+    }
+
     if len(headers) > 0 {
         log.Printf("Note: Custom headers (%v) are not applied in this version; use URL auth (e.g., https://user:pass@url)", headers)
     }
-    return os.WriteFile(outputFile, buf, 0644)
+    return nil
 }
