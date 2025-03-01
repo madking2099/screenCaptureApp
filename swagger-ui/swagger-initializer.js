@@ -1,9 +1,8 @@
 const urlParams = new URLSearchParams(window.location.search);
-const serverHost = urlParams.get('serverHost') || window.location.origin;
-const baseUrl = serverHost;
-
+const serverHost = urlParams.get('serverHost') || 'http://192.168.1.15:1388'; // Default to server IP
+const url = serverHost + '/api-docs/swagger.json';
 window.ui = SwaggerUIBundle({
-  url: baseUrl + '/api-docs/swagger.json',
+  url: url,
   dom_id: '#swagger-ui',
   presets: [
     SwaggerUIBundle.presets.apis,
@@ -13,7 +12,7 @@ window.ui = SwaggerUIBundle({
   deepLinking: true,
   requestInterceptor: (req) => {
     // Ensure all requests use the server host
-    req.url = baseUrl + req.url;
+    req.url = serverHost + req.url;
     return req;
   }
 });
