@@ -59,7 +59,7 @@ func main() {
     // Dynamically set server host, default to localhost or environment
     serverHost := os.Getenv("SERVER_HOST")
     if serverHost == "" {
-        serverHost = "http://localhost:1388" // Default for local testing
+        serverHost = "http://192.168.1.15:1388" // Default for local testing
         log.Printf("Using default SERVER_HOST: %s", serverHost)
     } else {
         log.Printf("Using SERVER_HOST from environment: %s", serverHost)
