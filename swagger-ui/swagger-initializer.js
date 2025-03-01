@@ -17,10 +17,8 @@ window.onload = function() {
     //});
     const urlParams = new URLSearchParams(window.location.search);
     const serverHost = urlParams.get('serverHost') || 'http://192.168.1.15:1388'; // Default to server IP
-    const baseUrl = serverHost;
-
     window.ui = SwaggerUIBundle({
-      url: baseUrl + '/api-docs/swagger.json',
+      url: serverHost + '/api-docs/swagger.json',
       dom_id: '#swagger-ui',
       presets: [
         SwaggerUIBundle.presets.apis,
@@ -29,9 +27,9 @@ window.onload = function() {
       layout: "BaseLayout",
       deepLinking: true,
       requestInterceptor: (req) => {
-        // Ensure all requests use the server host, even if UI defaults to localhost
+        // Ensure requests use the server host
         if (!req.url.startsWith('http')) {
-          req.url = baseUrl + req.url;
+          req.url = serverHost + req.url;
         }
         console.log('Intercepting request, new URL:', req.url); // Debug in browser
         return req;

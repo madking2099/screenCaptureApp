@@ -16,8 +16,11 @@ import (
 // @description Capture screenshots of webpages as images and serve them.
 // @license.name MIT
 // @license.url https://github.com/madking2099/screenCaptureApp/blob/master/LICENSE
-// @host ${SERVER_HOST}  // Dynamic host from environment
 // @BasePath /
+// @schemes http
+// @servers [
+//   {"url": "${SERVER_HOST}", "description": "Server host"}
+// ]
 
 type ScreenshotRequest struct {
     URL           string            `json:"url" binding:"required" example:"https://example.com"`
