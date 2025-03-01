@@ -56,6 +56,14 @@ func main() {
     log.Println("Initializing routes")
     r.GET("/", redirectToSwagger)
     log.Println("Serving Swagger UI statically at /swagger/")
+    // Dynamically set server host, default to localhost or environment
+    serverHost := os.Getenv("SERVER_HOST")
+    if serverHost == "" {
+        serverHost = "http://localhost:1388" // Default for local testing
+        log.Printf("Using default SERVER_HOST: %s", serverHost)
+    } else {
+        log.Printf("Using SERVER_HOST from environment: %s", serverHost)
+    }
     r.Static("/swagger", "./swagger-ui")
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
     r.GET("/health", getHealth)
