@@ -6,7 +6,8 @@ COPY swagger-ui ./swagger-ui
 RUN go mod tidy
 RUN go get -d -v ./...
 RUN go install github.com/swaggo/swag/cmd/swag@latest
-RUN swag init -g main.go && cat /app/docs/swagger.json
+# Set SERVER_HOST for swag init
+RUN SERVER_HOST=http://192.168.1.15:1388 swag init -g main.go && cat /app/docs/swagger.json
 RUN CGO_ENABLED=0 GOOS=linux go build -o screenshot-service main.go
 
 FROM debian:bullseye-slim
@@ -31,4 +32,6 @@ COPY --from=builder /app/docs ./docs
 COPY --from=builder /app/swagger-ui ./swagger-ui
 RUN mkdir -p static
 EXPOSE 8000
+# Optionally set SERVER_HOST at runtime (overrides build-time)
+ENV SERVER_HOST=http://192.168.1.15:1388
 CMD ["./screenshot-service"]
