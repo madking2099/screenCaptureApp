@@ -35,7 +35,7 @@ func main() {
     // Enhanced CORS with detailed logging
     r.Use(func(c *gin.Context) {
         origin := c.Request.Header.Get("Origin")
-        log.Printf("CORS request - Method: %s, Origin: %s, Path: %s", c.Request.Method, origin, c.Request.URL.Path)
+        log.Printf("CORS request - Method: %s, Origin: %s, Path: %s, Host: %s", c.Request.Method, origin, c.Request.URL.Path, c.Request.Host)
         if origin != "" {
             // Allow any origin for testing (restrict in production)
             c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
@@ -44,6 +44,7 @@ func main() {
             c.Writer.Header().Set("Access-Control-Max-Age", "86400") // Cache for 24 hours
             c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
             c.Writer.Header().Set("Vary", "Origin") // Ensure proper caching
+            log.Printf("CORS response - Allow-Origin: %s, Allow-Methods: %s", origin, c.Writer.Header().Get("Access-Control-Allow-Methods"))
         }
         if c.Request.Method == "OPTIONS" {
             log.Println("Handling CORS preflight - 204 No Content")
@@ -56,10 +57,10 @@ func main() {
     log.Println("Initializing routes")
     r.GET("/", redirectToSwagger)
     log.Println("Serving Swagger UI statically at /swagger/")
-    // Dynamically set server host, default to localhost or environment
+    // Dynamically set server host, default to server IP
     serverHost := os.Getenv("SERVER_HOST")
     if serverHost == "" {
-        serverHost = "http://192.168.1.15:1388" // Default for local testing
+        serverHost = "http://192.168.1.15:1388" // Default to server IP
         log.Printf("Using default SERVER_HOST: %s", serverHost)
     } else {
         log.Printf("Using SERVER_HOST from environment: %s", serverHost)
@@ -83,6 +84,7 @@ func redirectToSwagger(c *gin.Context) {
 // @Success 200 {object} map[string]string
 // @Router /health [get]
 func getHealth(c *gin.Context) {
+    log.Printf("Serving /health - Status: 200")
     c.JSON(200, gin.H{"status": "healthy"})
 }
 
