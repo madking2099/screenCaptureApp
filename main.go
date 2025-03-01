@@ -32,19 +32,33 @@ func main() {
         log.Fatal(err)
     }
 
-    // Enhanced CORS with detailed logging
+    // Enhanced CORS with detailed logging and LAN support
     r.Use(func(c *gin.Context) {
         origin := c.Request.Header.Get("Origin")
-        log.Printf("CORS request - Method: %s, Origin: %s, Path: %s, Host: %s", c.Request.Method, origin, c.Request.URL.Path, c.Request.Host)
+        host := c.Request.Host
+        log.Printf("CORS request - Method: %s, Origin: %s, Path: %s, Host: %s", c.Request.Method, origin, c.Request.URL.Path, host)
         if origin != "" {
-            // Allow any origin for testing (restrict in production)
-            c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+            // Allow specific origins for LAN (e.g., client IP) and localhost for testing
+            allowedOrigins := []string{
+                "http://localhost:1388",
+                "http://192.168.1.15:1388", // Server IP
+                "http://192.168.1.254:1388", // Your client IP (example, adjust as needed)
+            }
+            for _, allowed := range allowedOrigins {
+                if origin == allowed {
+                    c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+                    break
+                }
+            }
+            if c.Writer.Header().Get("Access-Control-Allow-Origin") == "" {
+                c.Writer.Header().Set("Access-Control-Allow-Origin", "http://192.168.1.15:1388") // Default to server
+            }
             c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
             c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
             c.Writer.Header().Set("Access-Control-Max-Age", "86400") // Cache for 24 hours
             c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
             c.Writer.Header().Set("Vary", "Origin") // Ensure proper caching
-            log.Printf("CORS response - Allow-Origin: %s, Allow-Methods: %s", origin, c.Writer.Header().Get("Access-Control-Allow-Methods"))
+            log.Printf("CORS response - Allow-Origin: %s, Allow-Methods: %s", c.Writer.Header().Get("Access-Control-Allow-Origin"), c.Writer.Header().Get("Access-Control-Allow-Methods"))
         }
         if c.Request.Method == "OPTIONS" {
             log.Println("Handling CORS preflight - 204 No Content")
@@ -84,7 +98,7 @@ func redirectToSwagger(c *gin.Context) {
 // @Success 200 {object} map[string]string
 // @Router /health [get]
 func getHealth(c *gin.Context) {
-    log.Printf("Serving /health - Status: 200")
+    log.Printf("Serving /health - Status: 200, Host: %s", c.Request.Host)
     c.JSON(200, gin.H{"status": "healthy"})
 }
 

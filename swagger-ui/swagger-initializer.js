@@ -15,15 +15,26 @@ window.onload = function() {
     //  ],
     //  layout: "StandaloneLayout"
     //});
+    const urlParams = new URLSearchParams(window.location.search);
+    const serverHost = urlParams.get('serverHost') || 'http://192.168.1.15:1388'; // Default to server IP
+    const baseUrl = serverHost;
+
     window.ui = SwaggerUIBundle({
-      url: "http://192.168.1.15:1388/api-docs/swagger.json", // Hardcode for testing
+      url: baseUrl + '/api-docs/swagger.json',
       dom_id: '#swagger-ui',
       presets: [
         SwaggerUIBundle.presets.apis,
         SwaggerUIStandalonePreset
       ],
       layout: "BaseLayout",
-      deepLinking: true
+      deepLinking: true,
+      requestInterceptor: (req) => {
+        // Ensure all requests use the server host, even if UI defaults to localhost
+        if (!req.url.startsWith('http')) {
+          req.url = baseUrl + req.url;
+        }
+        console.log('Intercepting request, new URL:', req.url); // Debug in browser
+        return req;
+      }
     });
-    //</editor-fold>
 };
