@@ -1,13 +1,13 @@
 FROM golang:1.21 AS builder
 WORKDIR /app
-COPY go.mod .
+COPY go.mod go.sum .
 COPY main.go .
 COPY swagger-ui ./swagger-ui
 RUN go mod tidy
 RUN go get -d -v ./...
 # Install latest swag (check for latest version on GitHub)
 RUN go install github.com/swaggo/swag/cmd/swag@v1.16.2
-# Generate OpenAPI 3.0 swagger.json with dynamic host using single output flag
+# Generate OpenAPI 3.0 swagger.json with dynamic host
 RUN SERVER_HOST=http://192.168.1.15:1388 swag init -g main.go --output docs --parseDependency --parseInternal --parseDepth 1
 RUN cat /app/docs/swagger.json
 RUN CGO_ENABLED=0 GOOS=linux go build -o screenshot-service main.go

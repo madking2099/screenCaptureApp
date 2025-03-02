@@ -7,7 +7,6 @@ import (
     "github.com/chromedp/chromedp"
     "github.com/gin-gonic/gin"
     "log"
-    "net/url"
     "os"
     "path/filepath"
     "strings"
@@ -317,7 +316,7 @@ func captureScreenshot(urlStr, outputFile string, headers map[string]string) err
     var buf []byte
     tasks := chromedp.Tasks{}
     if len(headers) > 0 {
-        // Create a custom action to set headers
+        // Use chromedp's ActionFunc to set headers (updated for newer chromedp versions)
         setHeaders := chromedp.ActionFunc(func(ctx context.Context) error {
             for key, value := range headers {
                 if err := chromedp.SetExtraHeader(ctx, key, value); err != nil {
