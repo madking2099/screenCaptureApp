@@ -1,10 +1,13 @@
 FROM golang:1.21 AS builder
 WORKDIR /app
-COPY go.mod go.sum .
-COPY main.go .
-COPY swagger-ui ./swagger-ui
+# Copy only go.mod first to leverage caching
+COPY go.mod .
+# Download dependencies (generates go.sum if not present)
 RUN go mod tidy
 RUN go get -d -v ./...
+# Copy remaining files
+COPY main.go .
+COPY swagger-ui ./swagger-ui
 # Install latest swag (check for latest version on GitHub)
 RUN go install github.com/swaggo/swag/cmd/swag@v1.16.2
 # Generate OpenAPI 3.0 swagger.json with dynamic host
