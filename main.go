@@ -2,10 +2,12 @@ package main
 
 import (
     "context"
+    "encoding/base64"
     "fmt"
     "github.com/chromedp/chromedp"
     "github.com/gin-gonic/gin"
     "log"
+    "net/url"
     "os"
     "path/filepath"
     "strings"
@@ -24,8 +26,21 @@ import (
 
 type ScreenshotRequest struct {
     URL           string            `json:"url" binding:"required" example:"https://example.com"`
-    Headers       map[string]string `json:"headers" example:"{\"User-Agent\": \"MyBot/1.0\"}"`
+    Headers       map[string]string `json:"headers" example:"{\"Authorization\": \"Bearer your-token\"}"`
     OutputFileName string            `json:"output_filename" example:"screenshot"`
+}
+
+type BasicAuthScreenshotRequest struct {
+    URL           string `json:"url" binding:"required" example:"https://website.com"`
+    Username      string `json:"username" binding:"required" example:"user"`
+    Password      string `json:"password" binding:"required" example:"pass"`
+    OutputFileName string `json:"output_filename" example:"screenshot"`
+}
+
+type BearerAuthScreenshotRequest struct {
+    URL          string `json:"url" binding:"required" example:"https://website.com"`
+    BearerToken  string `json:"bearer_token" binding:"required" example:"your-token"`
+    OutputFileName string `json:"output_filename" example:"screenshot"`
 }
 
 func main() {
@@ -84,8 +99,15 @@ func main() {
     }
     r.Static("/swagger", "./swagger-ui")
     r.StaticFile("/api-docs/swagger.json", "./docs/swagger.json")
+
+    // Existing route (unchanged)
     r.GET("/health", getHealth)
     r.POST("/screenshot", postScreenshot)
+
+    // New routes for auth-specific screenshot capture
+    r.POST("/screenshot/basic", postBasicAuthScreenshot)
+    r.POST("/screenshot/bearer", postBearerAuthScreenshot)
+
     r.DELETE("/static/:filename", deleteScreenshot)
 
     r.Run(":8000")
@@ -105,7 +127,7 @@ func getHealth(c *gin.Context) {
     c.JSON(200, gin.H{"status": "healthy"})
 }
 
-// @Summary Capture a webpage screenshot
+// @Summary Capture a webpage screenshot (generic)
 // @Description Takes a URL and returns a screenshot file URL. Headers beyond basic auth in URL are not supported yet.
 // @Accept json
 // @Produce json
@@ -148,6 +170,100 @@ func postScreenshot(c *gin.Context) {
     c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
 }
 
+// @Summary Capture a webpage screenshot with basic auth
+// @Description Takes a URL, username, password, and returns a screenshot file URL using basic authentication.
+// @Accept json
+// @Produce json
+// @Param request body BasicAuthScreenshotRequest true "Screenshot request payload with basic auth"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /screenshot/basic [post]
+func postBasicAuthScreenshot(c *gin.Context) {
+    log.Println("Received /screenshot/basic request")
+    var req BasicAuthScreenshotRequest
+    if err := c.BindJSON(&req); err != nil {
+        log.Printf("Failed to bind JSON: %v", err)
+        c.JSON(400, gin.H{"detail": "Invalid request"})
+        return
+    }
+    log.Printf("Request bound: %+v", req)
+
+    filename := req.OutputFileName
+    if filename == "" {
+        filename = fmt.Sprintf("screenshot_%d", os.Getpid())
+    }
+    if !strings.HasSuffix(filename, ".png") {
+        filename += ".png"
+    }
+    outputFile := filepath.Join("static", filename)
+    log.Printf("Output file: %s", outputFile)
+
+    // Formulate basic auth header
+    auth := req.Username + ":" + req.Password
+    basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
+    headers := map[string]string{"Authorization": basicAuth}
+
+    err := captureScreenshot(req.URL, outputFile, headers)
+    if err != nil {
+        log.Printf("Screenshot failed: %v", err)
+        if _, exists := os.Stat(outputFile); exists == nil {
+            os.Remove(outputFile)
+        }
+        c.JSON(500, gin.H{"detail": fmt.Sprintf("Error capturing screenshot: %v", err)})
+        return
+    }
+
+    log.Println("Screenshot captured successfully with basic auth")
+    c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
+}
+
+// @Summary Capture a webpage screenshot with bearer token auth
+// @Description Takes a URL, bearer token, and returns a screenshot file URL using bearer token authentication.
+// @Accept json
+// @Produce json
+// @Param request body BearerAuthScreenshotRequest true "Screenshot request payload with bearer token"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /screenshot/bearer [post]
+func postBearerAuthScreenshot(c *gin.Context) {
+    log.Println("Received /screenshot/bearer request")
+    var req BearerAuthScreenshotRequest
+    if err := c.BindJSON(&req); err != nil {
+        log.Printf("Failed to bind JSON: %v", err)
+        c.JSON(400, gin.H{"detail": "Invalid request"})
+        return
+    }
+    log.Printf("Request bound: %+v", req)
+
+    filename := req.OutputFileName
+    if filename == "" {
+        filename = fmt.Sprintf("screenshot_%d", os.Getpid())
+    }
+    if !strings.HasSuffix(filename, ".png") {
+        filename += ".png"
+    }
+    outputFile := filepath.Join("static", filename)
+    log.Printf("Output file: %s", outputFile)
+
+    // Formulate bearer token header
+    headers := map[string]string{"Authorization": "Bearer " + req.BearerToken}
+
+    err := captureScreenshot(req.URL, outputFile, headers)
+    if err != nil {
+        log.Printf("Screenshot failed: %v", err)
+        if _, exists := os.Stat(outputFile); exists == nil {
+            os.Remove(outputFile)
+        }
+        c.JSON(500, gin.H{"detail": fmt.Sprintf("Error capturing screenshot: %v", err)})
+        return
+    }
+
+    log.Println("Screenshot captured successfully with bearer token")
+    c.JSON(200, gin.H{"file_url": fmt.Sprintf("/static/%s", filename)})
+}
+
 // @Summary Delete a screenshot file
 // @Description Removes a screenshot file from the static directory
 // @Produce json
@@ -170,8 +286,10 @@ func deleteScreenshot(c *gin.Context) {
     c.JSON(200, gin.H{"message": fmt.Sprintf("File %s deleted", filename)})
 }
 
-func captureScreenshot(url, outputFile string, headers map[string]string) error {
-    log.Println("Starting screenshot capture for URL:", url)
+func captureScreenshot(urlStr, outputFile string, headers map[string]string) error {
+    log.Println("Starting screenshot capture for URL:", urlStr)
+
+    // Set up chromedp with allocator and context
     ctx, cancel := chromedp.NewExecAllocator(
         context.Background(),
         append(
@@ -195,13 +313,29 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
     }
     defer cancel()
 
+    // Apply headers to navigation if any exist
     var buf []byte
-    tasks := chromedp.Tasks{
-        chromedp.Navigate(url),
+    tasks := chromedp.Tasks{}
+    if len(headers) > 0 {
+        // Create a custom action to set headers
+        setHeaders := chromedp.ActionFunc(func(ctx context.Context) error {
+            for key, value := range headers {
+                if err := chromedp.SetExtraHeader(ctx, key, value); err != nil {
+                    return fmt.Errorf("failed to set header %s: %v", key, err)
+                }
+            }
+            return nil
+        })
+        tasks = append(tasks, setHeaders)
+    }
+
+    tasks = append(tasks,
+        chromedp.Navigate(urlStr),
         chromedp.WaitVisible("body", chromedp.ByQuery),
         chromedp.FullScreenshot(&buf, 90),
-    }
-    log.Println("Running chromedp tasks")
+    )
+
+    log.Println("Running chromedp tasks with headers:", headers)
     if err := chromedp.Run(ctx, tasks); err != nil {
         log.Printf("Chromedp run failed: %v", err)
         return err
@@ -214,7 +348,7 @@ func captureScreenshot(url, outputFile string, headers map[string]string) error 
     }
 
     if len(headers) > 0 {
-        log.Printf("Note: Custom headers (%v) are not applied in this version; use URL auth (e.g., https://user:pass@url)", headers)
+        log.Printf("Custom headers applied: %v", headers)
     }
     return nil
 }
