@@ -1,7 +1,7 @@
 FROM golang:1.21 AS builder
 WORKDIR /app
-# Copy only go.mod and go.sum first to leverage caching
-COPY go.mod go.sum .
+# Copy go.mod and go.sum to a directory (./)
+COPY go.mod go.sum ./
 # Download dependencies explicitly for the module
 RUN go mod download
 # Copy remaining files
